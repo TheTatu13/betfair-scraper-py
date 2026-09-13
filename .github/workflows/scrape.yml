@@ -1,0 +1,50 @@
+name: Scrape
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Run without writing to the API'
+        type: boolean
+        default: true
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      - name: Pre-scrape tests
+        run: pip install -e ".[dev]" && pytest -q
+      - name: Run scraper
+        run: |
+          if [ "${{ github.event.inputs.dry_run }}" = "false" ]; then
+            python -m scraper.main
+          else
+            python -m scraper.main --dry-run
+          fi
+
+  autoheal:
+    runs-on: ubuntu-latest
+    needs: scrape
+    if: failure()
+    permissions:
+      issues: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh label create auto-heal --color d73a4a --description "Automated failure of a scheduled workflow" 2>/dev/null || true
+          EXISTING=$(gh issue list --label auto-heal --state open --search "Auto-heal: scrape in:title" --json number --jq '.[0].number // empty')
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --body "Another run failed: ${RUN_URL} ($(date -u +%FT%TZ))."
+          else
+            gh issue create --title "Auto-heal: scrape workflow failed $(date -u +%Y-%m-%d)" --label auto-heal \
+              --body "The Scrape workflow failed. Run: ${RUN_URL}. Likely a broken listing selector (the canary aborts at 0 jobs), an api.peviitor.ro outage, or a failed pre-scrape test."
+          fi

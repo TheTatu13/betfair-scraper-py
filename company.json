@@ -1,0 +1,80 @@
+{
+  "validatedAt": "2026-09-13T15:39:46.809772+00:00",
+  "source": "ANAF",
+  "brand": "Betfair",
+  "anaf": {
+    "cui": 22201773,
+    "name": "BETFAIR ROMANIA DEVELOPMENT SRL",
+    "address": "JUD. CLUJ, MUN. CLUJ-NAPOCA, BLD. 21 DECEMBRIE 1989, NR.77, CLĂDIRILE A-F. ET.4",
+    "registrationNumber": "J2007003396127",
+    "phone": "0364631544",
+    "fax": "",
+    "postalCode": "400604",
+    "caenCode": "6210",
+    "iban": "",
+    "registrationState": "INREGISTRAT din data 02.08.2007",
+    "registrationDate": "2007-08-02",
+    "fiscalAuthority": "Direcţia Generală de Administrare a Marilor Contribuabili",
+    "ownershipForm": "PROPR.PRIVATA-CAPITAL PRIVAT STRAIN",
+    "organizationForm": "PERSOANA JURIDICA",
+    "legalForm": "SOCIETATE COMERCIALĂ CU RĂSPUNDERE LIMITATĂ",
+    "vatRegistered": true,
+    "vatPeriods": [
+      {
+        "start": "2007-08-10",
+        "end": null,
+        "yearStart": "",
+        "message": ""
+      }
+    ],
+    "cashBasisVat": false,
+    "cashBasisVatStart": null,
+    "cashBasisVatEnd": null,
+    "inactive": false,
+    "inactiveSince": null,
+    "reactivatedSince": null,
+    "splitVat": false,
+    "eFacturaRegistered": false,
+    "headquartersAddress": {
+      "street": "Bld. 21 Decembrie 1989",
+      "number": "77",
+      "locality": "Mun. Cluj-Napoca",
+      "county": "CLUJ",
+      "country": "",
+      "postalCode": "400604"
+    },
+    "fiscalAddress": {
+      "street": "",
+      "number": "",
+      "locality": "",
+      "county": "",
+      "country": "",
+      "postalCode": ""
+    },
+    "administrators": [
+      {
+        "name": "POPA IOANA",
+        "role": "administrator"
+      },
+      {
+        "name": "TOMȘA OVIDIU BOGDAN",
+        "role": "administrator"
+      },
+      {
+        "name": "LYNCH CONOR PATRICK",
+        "role": "administrator"
+      }
+    ],
+    "authorizedCaenCodes": [],
+    "onrcStatus": 0,
+    "onrcStatusLabel": "Funcțiune"
+  },
+  "peviitor": null,
+  "summary": {
+    "company": "BETFAIR ROMANIA DEVELOPMENT SRL",
+    "cif": "22201773",
+    "active": true,
+    "inactiveSince": null,
+    "address": "JUD. CLUJ, MUN. CLUJ-NAPOCA, BLD. 21 DECEMBRIE 1989, NR.77, CLĂDIRILE A-F. ET.4"
+  }
+}

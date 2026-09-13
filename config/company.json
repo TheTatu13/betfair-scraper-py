@@ -1,0 +1,10 @@
+{
+  "id": "22201773",
+  "company": "BETFAIR ROMANIA DEVELOPMENT SRL",
+  "brand": "Betfair",
+  "status": "activ",
+  "location": ["Cluj-Napoca"],
+  "website": ["https://www.betfairromania.ro"],
+  "career": ["https://www.betfairromania.ro/jobs"],
+  "scraperFile": "https://github.com/TheTatu13/betfair-scraper-py/actions/workflows/scrape.yml"
+}
