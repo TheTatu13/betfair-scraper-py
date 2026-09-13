@@ -24,6 +24,11 @@ def isolated(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(api, "query_solr", lambda cif: {"numFound": 0, "docs": []})
     monkeypatch.setattr(api, "upsert_jobs", lambda jobs: None)
+    # manageCompany now defaults to True (Category 1 audit -- it was off by an
+    # unverified assumption), so every test must stub these two or a bare
+    # main.run() would hit the real API.
+    monkeypatch.setattr(api, "upsert_company", lambda doc: None)
+    monkeypatch.setattr(api, "delete_job_by_url", lambda url: None)
     monkeypatch.setattr(
         job_validator, "validate_by_content",
         lambda url, **kw: {"url": url, "status": "active", "httpStatus": 200, "title": None, "error": None},
@@ -71,10 +76,7 @@ def test_manage_company_true_calls_upsert_company(monkeypatch, isolated):
     calls = []
     monkeypatch.setattr(api, "upsert_company", lambda doc: calls.append(doc))
 
-    try:
-        main.run()
-    finally:
-        monkeypatch.setitem(scraper, "manageCompany", False)
+    main.run()
 
     assert len(calls) == 1
     assert calls[0]["id"] == "12345678"
@@ -87,6 +89,7 @@ def test_manage_company_false_never_calls_upsert_company(monkeypatch, isolated):
     monkeypatch.setattr(main, "scrape_careers", lambda: [
         {"url": "https://jobs.example.com/careers/x/", "title": "X"},
     ])
+    monkeypatch.setitem(scraper, "manageCompany", False)
     called = []
     monkeypatch.setattr(api, "upsert_company", lambda doc: called.append(doc))
 

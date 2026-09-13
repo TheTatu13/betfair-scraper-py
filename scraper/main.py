@@ -229,6 +229,11 @@ def run(*, dry_run: bool = False) -> int:
                 log.warning("delete failed: %s -- %s", url, exc)
         return 0
 
+    # On by default: upsert_company is an idempotent PUT of ANAF-validated facts
+    # (name, address, website, career URL), so there's no real downside to
+    # keeping the company core in sync -- unlike staleJobDeletion below, this
+    # is additive, not destructive. Only turn it off once you've verified
+    # another scraper genuinely owns this CIF's company record.
     if scraper.get("manageCompany"):
         try:
             api.upsert_company({
@@ -244,7 +249,12 @@ def run(*, dry_run: bool = False) -> int:
         except Exception as exc:  # noqa: BLE001 - non-fatal, matches the JS template
             log.info("could not upsert company: %s", exc)
     else:
-        log.info("manageCompany=false -- leaving company core untouched (owned by another scraper on this CIF)")
+        log.info(
+            "manageCompany=false -- leaving company core untouched (explicitly disabled in "
+            "config/scraper.json; only turn this off once you've *verified* another scraper "
+            "actually manages this CIF's company record -- an unverified guess here is exactly "
+            "what left a real company entirely missing from peviitor's company core before)"
+        )
 
     log.info("=== Step 3: scrape ===")
     raw_jobs = scrape_careers()
@@ -271,6 +281,14 @@ def run(*, dry_run: bool = False) -> int:
     updated = sorted(scraped_urls & all_existing)
     gone = sorted(own_existing - scraped_urls)
 
+    # Off by default -- deliberately, not by an unverified guess. Deletion is
+    # already scoped to ownJobUrlPrefix, so a shared CIF is never actually the
+    # risk; the real reason to leave this off is that a *partial* scrape
+    # failure (site glitch, a selector that only matches some cards) still
+    # passes the canary (jobs > 0) and would otherwise delete real, still-live
+    # jobs this run simply failed to find. job-deep-validate.yml
+    # (scraper/validate_jobs.py) is the safer way to catch genuinely dead
+    # URLs -- it live-checks each one instead of inferring "gone" from a diff.
     if scraper["staleJobDeletion"]:
         if gone:
             log.info("=== Step 4.5: delete %d stale job(s) (ours only) ===", len(gone))
@@ -284,7 +302,11 @@ def run(*, dry_run: bool = False) -> int:
         else:
             log.info("no stale jobs to delete")
     else:
-        log.info("step 4.5 skipped -- staleJobDeletion=false (coexistence with other scrapers on this CIF)")
+        log.info(
+            "step 4.5 skipped -- staleJobDeletion=false (deliberate: a partial scrape "
+            "failure would otherwise delete real jobs it simply failed to find this run -- "
+            "use job-deep-validate.yml to actually confirm and clean up dead URLs)"
+        )
 
     # Give SOLR a moment to settle, then re-query for real -- the summary below
     # must reflect confirmed post-write state, not just what we intended to

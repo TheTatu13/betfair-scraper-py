@@ -15,6 +15,10 @@ def no_api(monkeypatch, tmp_path):
     upserts = []
     monkeypatch.setattr(api, "query_solr", lambda cif: {"numFound": 0, "docs": []})
     monkeypatch.setattr(api, "upsert_jobs", lambda jobs: upserts.append(jobs))
+    # manageCompany now defaults to True (Category 1 audit), so a bare
+    # main.run() would hit this too.
+    monkeypatch.setattr(api, "upsert_company", lambda doc: None)
+    monkeypatch.setattr(api, "delete_job_by_url", lambda url: None)
     monkeypatch.setattr(
         job_validator, "validate_by_content",
         lambda url, **kw: {"url": url, "status": "active", "httpStatus": 200, "title": None, "error": None},

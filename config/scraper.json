@@ -9,7 +9,7 @@
     "retryStatus": [429, 500, 502, 503, 504]
   },
   "staleJobDeletion": false,
-  "manageCompany": false,
+  "manageCompany": true,
   "defaultLocation": ["Cluj-Napoca"],
   "defaultWorkmode": "on-site",
   "ownJobUrlPrefix": "https://www.betfairromania.ro/jobs/",
