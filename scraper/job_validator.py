@@ -57,7 +57,11 @@ def validate_by_content(
     user_agent: str = USER_AGENT,
     timeout: float = DEFAULT_TIMEOUT_SEC,
 ) -> dict:
-    """Full GET + body scan. Catches soft-404s (HTTP 200, page says "no longer available")."""
+    """Full GET + body scan. Catches soft-404s (HTTP 200, page says "no longer
+    available") *and* hard 404s whose body doesn't match any keyword (a site's
+    real "not found" page rarely uses these exact phrases) -- a non-2xx/3xx
+    status is unambiguous evidence the page is gone, independent of what its
+    body says."""
     keywords = keywords if keywords is not None else DEFAULT_EXPIRED_KEYWORDS
     try:
         res = requests.get(
@@ -72,7 +76,7 @@ def validate_by_content(
         )
         text = res.text or ""
         lower = text.lower()
-        expired = any(kw in lower for kw in keywords)
+        expired = not res.ok or any(kw in lower for kw in keywords)
         title_match = _TITLE_RX.search(text)
         return _result(url, "expired" if expired else "active", res.status_code, title_match.group(1).strip() if title_match else None)
     except requests.RequestException as exc:
@@ -103,13 +107,14 @@ def validate_by_browser(
             browser = pw.chromium.launch(headless=True, args=["--no-sandbox"])
             try:
                 page = browser.new_page()
-                page.goto(url, wait_until="networkidle", timeout=timeout_ms)
+                response = page.goto(url, wait_until="networkidle", timeout=timeout_ms)
                 text = page.inner_text("body")
                 title = page.title()
             finally:
                 browser.close()
+        status = response.status if response is not None else 200
         lower = text.lower()
-        expired = any(kw in lower for kw in keywords)
-        return _result(url, "expired" if expired else "active", 200, title or None)
+        expired = status >= 400 or any(kw in lower for kw in keywords)
+        return _result(url, "expired" if expired else "active", status, title or None)
     except Exception as exc:  # noqa: BLE001 - any browser failure is reported, not fatal
         return _result(url, "error", error=str(exc))

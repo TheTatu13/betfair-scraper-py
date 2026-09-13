@@ -99,6 +99,42 @@ def test_css_and_structural_text():
     assert structural_text(scope, ["[itemprop='title']"])[1]() == "Structural Title"
 
 
+# --------------------------------------------------------------------------
+# _Scope.href — the URL cascade (real <a href>, not a guessed permalink)
+# --------------------------------------------------------------------------
+
+def _scope_for(html: str):
+    return locate_articles(f"<div>{html}</div>", "div").scopes[0]
+
+
+class TestScopeHref:
+    def test_finds_the_only_anchor_with_no_selector_given(self):
+        scope = _scope_for('<h2>Title</h2><a class="btn" href="/jobs/jr1/title/">View</a>')
+        assert scope.href().value == "/jobs/jr1/title/"
+
+    def test_prefers_an_explicit_selector_when_given(self):
+        scope = _scope_for(
+            '<a class="social" href="https://x.example/">X</a>'
+            '<a class="apply" href="/jobs/jr1/title/">Apply</a>'
+        )
+        assert scope.href(".apply").value == "/jobs/jr1/title/"
+
+    def test_falls_back_to_first_anchor_when_the_selector_misses(self):
+        scope = _scope_for('<a href="/jobs/jr1/title/">Apply</a>')
+        assert scope.href(".nonexistent").value == "/jobs/jr1/title/"
+
+    def test_ignores_fragment_and_javascript_links(self):
+        scope = _scope_for(
+            '<a href="#">Save</a><a href="javascript:void(0)">Share</a>'
+            '<a href="/jobs/jr1/title/">Apply</a>'
+        )
+        assert scope.href().value == "/jobs/jr1/title/"
+
+    def test_returns_none_when_the_block_has_no_anchor(self):
+        scope = _scope_for("<h2>Title</h2><p>no links here</p>")
+        assert scope.href().value is None
+
+
 def test_text_from_html():
     assert text_from_html("<b>Key</b>  Account   <i>Manager</i>") == "Key Account Manager"
     assert text_from_html("") is None

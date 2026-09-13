@@ -46,6 +46,15 @@ class TestParseListingHappyPath:
         assert items[0]["expirationdate"].startswith("2026-09-30")
         assert items[1]["expirationdate"] is None
 
+    def test_carries_the_real_scraped_url_not_a_guessed_slug(self, fixture_html, selectors):
+        """The real href (which may carry an ID a title-slug guess could never
+        reproduce, e.g. "/jobs/jr133930/software-architect/") must survive
+        parse_listing untouched -- main.py resolves it against the listing
+        page, it does not fall back to guessing when this is present."""
+        items = parse_listing(fixture_html("listing_ok.html"), selectors)
+        assert items[0]["url"] == "/careers/jr1/senior-widget-engineer/"
+        assert items[1]["url"] == "/careers/jr2/night-shift-operator/"
+
     def test_empty_when_nothing_matches(self, selectors):
         assert parse_listing("<div>no jobs here</div>", selectors) == []
 

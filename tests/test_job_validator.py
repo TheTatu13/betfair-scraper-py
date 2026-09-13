@@ -43,6 +43,21 @@ def test_validate_by_content_expired_on_soft_404_keyword(requests_mock):
     assert result["httpStatus"] == 200  # soft-404: HTTP is 200, the body says otherwise
 
 
+def test_validate_by_content_expired_on_hard_404_even_without_a_keyword_match(requests_mock):
+    """A real site's own "not found" page rarely uses any of
+    DEFAULT_EXPIRED_KEYWORDS' exact phrasing (confirmed live against
+    betfairromania.ro: its 404 page is titled "Page Not Found", matching none
+    of them) -- the HTTP status alone must be enough to call it expired."""
+    requests_mock.get(
+        "https://x/jobs/a/",
+        status_code=404,
+        text="<html><title>Page Not Found</title><body>Oops, nothing here.</body></html>",
+    )
+    result = jv.validate_by_content("https://x/jobs/a/")
+    assert result["status"] == "expired"
+    assert result["httpStatus"] == 404
+
+
 def test_validate_by_content_error_on_network_failure(requests_mock):
     requests_mock.get("https://x/jobs/a/", exc=requests.Timeout("timed out"))
     result = jv.validate_by_content("https://x/jobs/a/")

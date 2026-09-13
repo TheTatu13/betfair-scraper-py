@@ -3,7 +3,7 @@ scrapes nothing (or nothing survives validation)."""
 
 import pytest
 
-from scraper import api, company as company_validation, main
+from scraper import api, company as company_validation, job_validator, main
 from scraper.validate import CanaryError
 
 
@@ -15,6 +15,10 @@ def no_api(monkeypatch, tmp_path):
     upserts = []
     monkeypatch.setattr(api, "query_solr", lambda cif: {"numFound": 0, "docs": []})
     monkeypatch.setattr(api, "upsert_jobs", lambda jobs: upserts.append(jobs))
+    monkeypatch.setattr(
+        job_validator, "validate_by_content",
+        lambda url, **kw: {"url": url, "status": "active", "httpStatus": 200, "title": None, "error": None},
+    )
     monkeypatch.setattr(
         company_validation,
         "validate_and_get_company",

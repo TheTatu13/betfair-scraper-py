@@ -87,13 +87,22 @@ def _clean_title(raw: str | None) -> str | None:
 
 
 def parse_listing(html: str, selectors: dict | None = None) -> list[dict]:
-    """Parse the open-positions page into ``{title, expirationdate}`` items,
-    self-healing through the selector cascade (default: ``config/scraper.json``;
-    tests pass ``selectors`` explicitly):
+    """Parse the open-positions page into ``{title, expirationdate, url}``
+    items, self-healing through the selector cascade (default:
+    ``config/scraper.json``; tests pass ``selectors`` explicitly):
 
         article blocks:  CSS list -> JSON-LD JobPosting -> regex <article>
         title:           CSS list -> Scrapling (optional) -> regex <hN>/<a>
         deadline:        CSS list -> date regex over the whole block text
+        url:             first real <a href> in the block (may be relative;
+                          the caller resolves it against the listing page)
+
+    ``url`` is ``None`` when the block has no anchor at all -- the caller
+    then falls back to a sitemap match or a title-slug guess. Prefer this
+    scraped ``url`` whenever present: guessing a permalink from the title
+    alone breaks on any site whose real URL needs an ID the title can't
+    reproduce (see ai/JOB_MODEL.md history -- this is what silently sent
+    404ing URLs to peviitor before this field existed).
     """
     sel = selectors if selectors is not None else _SEL
     articles = locate_articles(html, sel["jobArticle"])
@@ -108,7 +117,11 @@ def parse_listing(html: str, selectors: dict | None = None) -> list[dict]:
                 continue
             seen.add(title.lower())
             strategies.add("jsonld")
-            items.append({"title": title, "expirationdate": parse_deadline(posting.get("validThrough"))})
+            items.append({
+                "title": title,
+                "expirationdate": parse_deadline(posting.get("validThrough")),
+                "url": posting.get("url") or None,
+            })
         log.info("parse_listing: %d items via JSON-LD JobPosting", len(items))
         return items
 
@@ -133,7 +146,8 @@ def parse_listing(html: str, selectors: dict | None = None) -> list[dict]:
 
         meta = scope.text(sel["jobMeta"]).value
         deadline = parse_deadline(meta) or parse_deadline(scope.full_text())
-        items.append({"title": title, "expirationdate": deadline})
+        url = scope.href(sel.get("jobUrl")).value
+        items.append({"title": title, "expirationdate": deadline, "url": url})
 
     tag = f" [{', '.join(sorted(strategies))}]" if strategies else ""
     log.info("parse_listing: %d items via %s%s", len(items), articles.mode, tag)

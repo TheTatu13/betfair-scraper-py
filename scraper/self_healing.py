@@ -247,6 +247,29 @@ class _Scope:
                     return Match(value=value, strategy=f'css("{sel}")')
         return Match(value=None, strategy=None)
 
+    def href(self, selectors: str | Sequence[str] | None = None) -> Match:
+        """First real (non-fragment, non-``javascript:``) ``href`` in this
+        block: from ``selectors`` if given, else the first ``<a href>``
+        anywhere in the block. A block usually holds exactly one meaningful
+        link (a "view details" / "apply" button, or the title itself
+        wrapped in ``<a>``) -- this is a much stronger signal than guessing
+        the URL from the title, which breaks the moment the real permalink
+        needs an ID segment the title can't reproduce."""
+        for sel in as_list(selectors):
+            try:
+                el = self._node.select_one(sel)
+            except Exception:  # noqa: BLE001 - invalid selector, try next
+                continue
+            if el is not None:
+                value = (el.get("href") or "").strip()
+                if value and not value.startswith(("#", "javascript:")):
+                    return Match(value=value, strategy=f'css("{sel}")[href]')
+        for a in self._node.select("a[href]"):
+            value = (a.get("href") or "").strip()
+            if value and not value.startswith(("#", "javascript:")):
+                return Match(value=value, strategy="first-anchor-href")
+        return Match(value=None, strategy=None)
+
     def full_text(self) -> str:
         return _clean(self._node.get_text(" ", strip=True))
 

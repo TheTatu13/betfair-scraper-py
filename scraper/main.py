@@ -13,9 +13,9 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
-from . import api, fetch
+from . import api, fetch, job_validator
 from . import company as company_validation
 from .config import COMPANY_CIF, OWN_URL_PREFIX, company, scraper
 from .markdown_generator import generate_jobs_markdown
@@ -87,11 +87,12 @@ def _match_sitemap_url(title: str, entries: list[dict]) -> str | None:
 
 
 def scrape_careers() -> list[dict]:
-    log.info("scraping %s ...", scraper["sources"]["listing"])
+    listing_url = scraper["sources"]["listing"]
+    log.info("scraping %s ...", listing_url)
     entries = fetch_sitemap_job_urls()
 
     try:
-        resp = fetch.get(scraper["sources"]["listing"], label="listing")
+        resp = fetch.get(listing_url, label="listing")
         resp.raise_for_status()
         items = parse_listing(resp.text)
     except Exception as exc:  # noqa: BLE001
@@ -102,7 +103,16 @@ def scrape_careers() -> list[dict]:
     if items:
         archive = scraper["sources"]["jobArchive"]
         for item in items:
-            url = _match_sitemap_url(item["title"], entries) or f"{archive}{slugify(item['title'])}/"
+            # The real <a href> scraped from the page is ground truth -- prefer
+            # it over guessing. Sites whose permalink needs an ID the title
+            # can't reproduce (e.g. "/jobs/jr133930/software-architect/")
+            # silently 404 under the guess, which nothing else catches until
+            # job_validator's HEAD check below.
+            scraped_url = item.get("url")
+            if scraped_url:
+                url = urljoin(listing_url, scraped_url)
+            else:
+                url = _match_sitemap_url(item["title"], entries) or f"{archive}{slugify(item['title'])}/"
             jobs.append({
                 "url": url,
                 "title": item["title"],
@@ -124,6 +134,33 @@ def scrape_careers() -> list[dict]:
 
     log.info("found %d jobs on %s", len(jobs), _CAREERS_SOURCE)
     return jobs
+
+
+def _drop_dead_urls(jobs: list[dict]) -> list[dict]:
+    """Pre-upload safety net: GET-check every job URL and drop the ones that
+    don't resolve. ``validate.py`` only checks URL *shape* (a syntactically
+    valid http(s) URL); job_validator.py can actually tell a live job from a
+    404, but nothing called it before an upload -- this is what let a
+    URL-construction bug reach peviitor undetected.
+
+    Uses ``validate_by_content`` (GET), not ``validate_by_head``: at least one
+    real careers site (Workday-based) answers every HEAD request with a
+    generic 404 regardless of whether the resource exists (`Allow: GET` in
+    the response) -- HEAD-only would have dropped every real job."""
+    alive: list[dict] = []
+    for job in jobs:
+        result = job_validator.validate_by_content(job["url"])
+        if result["status"] == "active":
+            alive.append(job)
+        else:
+            log.warning(
+                'dropped "%s" (%s): live URL check failed -- %s',
+                job.get("title", "?"), job.get("url", "?"),
+                result.get("error") or f"HTTP {result.get('httpStatus')}",
+            )
+    if len(alive) < len(jobs):
+        log.warning("%d/%d job(s) failed live URL validation and were dropped", len(jobs) - len(alive), len(jobs))
+    return alive
 
 
 def _to_job_model(raw: dict, cif: str, company_name: str) -> dict:
@@ -217,12 +254,15 @@ def run(*, dry_run: bool = False) -> int:
     assert_scrape_yielded_jobs(valid_jobs)  # everything failed validation -> also a canary
 
     jobs = [_to_job_model(j, cif, company_name) for j in valid_jobs]
+    jobs = _drop_dead_urls(jobs)
 
     log.info("=== Step 4: upsert ===")
     if dry_run:
         log.info("dry-run -- would upsert %d jobs", len(jobs))
-    else:
+    elif jobs:
         api.upsert_jobs(jobs)
+    else:
+        log.info("no live jobs to upsert -- skipping (API rejects an empty array)")
 
     _write_docs(company_name, cif, address, jobs)
 

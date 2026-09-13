@@ -79,6 +79,26 @@ levels 1–4 by hand. The two are deliberately kept in step:
 4. Add a test per level in `tests/test_self_healing.py` / `tests/test_parse.py`
    (primary works → fallback works → regex works → all-fail logs).
 
+## URL extraction (`Scope.href`) and live validation
+
+`parse_listing` also extracts each job's real URL via `Scope.href(selectors)`:
+an explicit selector's `href` if given, else the first real (non-`#`,
+non-`javascript:`) `<a href>` anywhere in the block. This is deliberately a
+**scraped fact, not a guess** — `main.py::scrape_careers()` only falls back to
+a sitemap match, then to `f"{archive}{slugify(title)}/"`, when the block had
+no anchor at all. A slug guessed from the title can never reproduce a
+permalink that embeds an ID (`/jobs/jr133930/software-architect/`), which is
+exactly what silently sent 404ing URLs to peviitor before this field existed.
+
+As a second, independent safety net, `main.py::run()` GET-checks every job
+URL via `job_validator.validate_by_content()` right before upload
+(`_drop_dead_urls`) and drops whatever doesn't resolve — `validate_job` only
+checks URL *shape* (a syntactically valid http(s) string), it was never able
+to catch a 404. `validate_by_content`, not `validate_by_head`: at least one
+real careers site (Workday-based) answers *every* HEAD request with a generic
+404 regardless of whether the resource exists — HEAD-only would have dropped
+every real job.
+
 ## Validation & canary (`scraper/validate.py`)
 
 - `validate_job(job)` → `(is_valid, errors)`: URL must be a real http(s) URL,
