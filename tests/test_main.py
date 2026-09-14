@@ -15,7 +15,7 @@ from urllib.parse import urljoin
 import pytest
 
 from scraper import api, company as company_validation, job_validator, main
-from scraper.config import scraper
+from scraper.config import company, scraper
 
 
 @pytest.fixture
@@ -82,6 +82,7 @@ def test_manage_company_true_calls_upsert_company(monkeypatch, isolated):
     assert calls[0]["id"] == "12345678"
     assert calls[0]["company"] == "EXAMPLE CO"
     assert calls[0]["location"] == ["Cluj-Napoca"]
+    assert calls[0]["scraperFile"] == company["scraperFile"]
 
 
 def test_manage_company_false_never_calls_upsert_company(monkeypatch, isolated):

@@ -244,6 +244,7 @@ def run(*, dry_run: bool = False) -> int:
                 "location": [address] if address else scraper["defaultLocation"],
                 "website": company.get("website"),
                 "career": company.get("career"),
+                "scraperFile": company.get("scraperFile"),
                 "lastScraped": datetime.now(timezone.utc).date().isoformat(),
             })
         except Exception as exc:  # noqa: BLE001 - non-fatal, matches the JS template
