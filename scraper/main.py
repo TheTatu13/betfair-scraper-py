@@ -215,18 +215,25 @@ def run(*, dry_run: bool = False) -> int:
     log.info("SOLR has %d jobs for this CIF (%d ours)", existing["numFound"], len(own_existing))
 
     log.info("=== Step 2: validate company via ANAF ===")
-    validated = company_validation.validate_and_get_company()
+    validated = company_validation.validate_and_get_company(dry_run=dry_run)
     company_name = validated["company"]
     cif = validated["cif"]
     address = validated.get("address") or ""
 
     if validated["status"] == "inactive":
-        log.warning("company is INACTIVE -- removing only our own jobs, skipping scrape.")
-        for url in own_existing:
-            try:
-                api.delete_job_by_url(url)
-            except Exception as exc:  # noqa: BLE001 - best-effort cleanup, one bad URL shouldn't abort the rest
-                log.warning("delete failed: %s -- %s", url, exc)
+        if dry_run:
+            log.warning(
+                "company is INACTIVE -- dry-run, so NOT deleting our %d job(s) (would delete "
+                "on a real run; validate_and_get_company already skipped the CIF-wide delete)",
+                len(own_existing),
+            )
+        else:
+            log.warning("company is INACTIVE -- removing only our own jobs, skipping scrape.")
+            for url in own_existing:
+                try:
+                    api.delete_job_by_url(url)
+                except Exception as exc:  # noqa: BLE001 - best-effort cleanup, one bad URL shouldn't abort the rest
+                    log.warning("delete failed: %s -- %s", url, exc)
         return 0
 
     # On by default: upsert_company is an idempotent PUT of ANAF-validated facts
@@ -234,7 +241,7 @@ def run(*, dry_run: bool = False) -> int:
     # keeping the company core in sync -- unlike staleJobDeletion below, this
     # is additive, not destructive. Only turn it off once you've verified
     # another scraper genuinely owns this CIF's company record.
-    if scraper.get("manageCompany"):
+    if scraper.get("manageCompany") and not dry_run:
         try:
             api.upsert_company({
                 "id": cif,
@@ -249,6 +256,8 @@ def run(*, dry_run: bool = False) -> int:
             })
         except Exception as exc:  # noqa: BLE001 - non-fatal, matches the JS template
             log.info("could not upsert company: %s", exc)
+    elif dry_run and scraper.get("manageCompany"):
+        log.info("dry-run -- would upsert company core for CIF %s", cif)
     else:
         log.info(
             "manageCompany=false -- leaving company core untouched (explicitly disabled in "

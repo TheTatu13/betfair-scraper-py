@@ -54,7 +54,7 @@ def test_inactive_company_deletes_only_own_jobs_and_skips_scrape(monkeypatch, is
             ],
         },
     )
-    monkeypatch.setattr(company_validation, "validate_and_get_company", lambda: _active(status="inactive"))
+    monkeypatch.setattr(company_validation, "validate_and_get_company", lambda **kw: _active(status="inactive"))
     deleted = []
     monkeypatch.setattr(api, "delete_job_by_url", lambda url: deleted.append(url))
     scrape_called = []
@@ -68,7 +68,7 @@ def test_inactive_company_deletes_only_own_jobs_and_skips_scrape(monkeypatch, is
 
 
 def test_manage_company_true_calls_upsert_company(monkeypatch, isolated):
-    monkeypatch.setattr(company_validation, "validate_and_get_company", lambda: _active())
+    monkeypatch.setattr(company_validation, "validate_and_get_company", lambda **kw: _active())
     monkeypatch.setattr(main, "scrape_careers", lambda: [
         {"url": "https://jobs.example.com/careers/x/", "title": "X"},
     ])
@@ -86,7 +86,7 @@ def test_manage_company_true_calls_upsert_company(monkeypatch, isolated):
 
 
 def test_manage_company_false_never_calls_upsert_company(monkeypatch, isolated):
-    monkeypatch.setattr(company_validation, "validate_and_get_company", lambda: _active())
+    monkeypatch.setattr(company_validation, "validate_and_get_company", lambda **kw: _active())
     monkeypatch.setattr(main, "scrape_careers", lambda: [
         {"url": "https://jobs.example.com/careers/x/", "title": "X"},
     ])
@@ -107,7 +107,7 @@ def test_stale_job_deletion_true_deletes_gone_urls(monkeypatch, isolated):
         "query_solr",
         lambda cif: {"numFound": 1, "docs": [{"url": f"{own_prefix}old-job/"}]},
     )
-    monkeypatch.setattr(company_validation, "validate_and_get_company", lambda: _active())
+    monkeypatch.setattr(company_validation, "validate_and_get_company", lambda **kw: _active())
     monkeypatch.setattr(main, "scrape_careers", lambda: [
         {"url": f"{own_prefix}new-job/", "title": "New Job"},
     ])
@@ -131,7 +131,7 @@ def test_stale_job_deletion_false_kept_by_default(monkeypatch, isolated):
         "query_solr",
         lambda cif: {"numFound": 1, "docs": [{"url": f"{own_prefix}old-job/"}]},
     )
-    monkeypatch.setattr(company_validation, "validate_and_get_company", lambda: _active())
+    monkeypatch.setattr(company_validation, "validate_and_get_company", lambda **kw: _active())
     monkeypatch.setattr(main, "scrape_careers", lambda: [
         {"url": f"{own_prefix}new-job/", "title": "New Job"},
     ])
@@ -144,7 +144,7 @@ def test_stale_job_deletion_false_kept_by_default(monkeypatch, isolated):
 
 
 def test_successful_run_writes_docs_jobs_md_and_company_json(monkeypatch, isolated):
-    monkeypatch.setattr(company_validation, "validate_and_get_company", lambda: _active())
+    monkeypatch.setattr(company_validation, "validate_and_get_company", lambda **kw: _active())
     monkeypatch.setattr(main, "scrape_careers", lambda: [
         {"url": "https://jobs.example.com/careers/widget-engineer/", "title": "Widget Engineer"},
     ])
@@ -164,7 +164,7 @@ def test_summary_reflects_confirmed_post_upload_solr_state_not_local_estimate(mo
     """The whole point of the re-query: if the real, confirmed SOLR count after
     the write differs from what we locally assumed we just upserted, the
     printed summary must show the confirmed number, not the optimistic one."""
-    monkeypatch.setattr(company_validation, "validate_and_get_company", lambda: _active())
+    monkeypatch.setattr(company_validation, "validate_and_get_company", lambda **kw: _active())
     monkeypatch.setattr(main, "scrape_careers", lambda: [
         {"url": "https://jobs.example.com/careers/widget-engineer/", "title": "Widget Engineer"},
     ])
@@ -183,7 +183,7 @@ def test_summary_reflects_confirmed_post_upload_solr_state_not_local_estimate(mo
 
 
 def test_run_sleeps_before_the_final_reverification_query(monkeypatch, isolated):
-    monkeypatch.setattr(company_validation, "validate_and_get_company", lambda: _active())
+    monkeypatch.setattr(company_validation, "validate_and_get_company", lambda **kw: _active())
     monkeypatch.setattr(main, "scrape_careers", lambda: [
         {"url": "https://jobs.example.com/careers/widget-engineer/", "title": "Widget Engineer"},
     ])
@@ -264,7 +264,7 @@ class TestDropDeadUrls:
     def test_run_skips_upsert_when_every_job_fails_live_validation(self, monkeypatch, isolated):
         """404s must never reach peviitor -- and an empty array must never
         be sent to api.upsert_jobs (the API rejects it)."""
-        monkeypatch.setattr(company_validation, "validate_and_get_company", lambda: _active())
+        monkeypatch.setattr(company_validation, "validate_and_get_company", lambda **kw: _active())
         monkeypatch.setattr(main, "scrape_careers", lambda: [
             {"url": "https://jobs.example.com/careers/widget-engineer/", "title": "Widget Engineer"},
         ])

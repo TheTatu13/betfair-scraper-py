@@ -26,7 +26,7 @@ def no_api(monkeypatch, tmp_path):
     monkeypatch.setattr(
         company_validation,
         "validate_and_get_company",
-        lambda: {"status": "active", "company": "EXAMPLE CO", "cif": "12345678", "address": ""},
+        lambda **kw: {"status": "active", "company": "EXAMPLE CO", "cif": "12345678", "address": ""},
     )
     return upserts
 

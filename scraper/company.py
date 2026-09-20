@@ -157,8 +157,14 @@ def get_company_data() -> dict[str, Any]:
     }
 
 
-def validate_and_get_company() -> dict[str, Any]:
-    """Full validation workflow: ANAF -> SOLR check -> peviitor check -> cache."""
+def validate_and_get_company(*, dry_run: bool = False) -> dict[str, Any]:
+    """Full validation workflow: ANAF -> SOLR check -> peviitor check -> cache.
+
+    ``dry_run`` must reach all the way here: an ANAF-inactive company below
+    triggers ``delete_jobs_by_cif`` -- a real, CIF-wide DELETE against
+    peviitor's live API -- and this function used to fire it unconditionally,
+    with no way for a caller to ask for a safe, read-only check.
+    """
     log.info("=== Step 1: Validate company via ANAF ===")
     data = get_company_data()
     company_name, cif, active, anaf_data = data["company"], data["cif"], data["active"], data["anafData"]
@@ -179,9 +185,16 @@ def validate_and_get_company() -> dict[str, Any]:
         _save_company_data(anaf_data, peviitor_data)
 
     if not active:
-        log.warning("company is INACTIVE in ANAF - deleting jobs from SOLR and stopping")
-        if solr_result["numFound"] > 0:
-            api.delete_jobs_by_cif(cif)
+        if dry_run:
+            log.warning(
+                "company is INACTIVE in ANAF -- dry-run, so NOT deleting the %d job(s) "
+                "under this CIF (would run delete_jobs_by_cif on a real run)",
+                solr_result["numFound"],
+            )
+        else:
+            log.warning("company is INACTIVE in ANAF - deleting jobs from SOLR and stopping")
+            if solr_result["numFound"] > 0:
+                api.delete_jobs_by_cif(cif)
         return {"status": "inactive", "company": company_name, "cif": cif, "existingJobsCount": solr_result["numFound"]}
 
     address = (anaf_data or {}).get("address") or ""

@@ -121,6 +121,24 @@ def test_validate_and_get_company_inactive_skips_delete_when_solr_empty(monkeypa
     assert result["status"] == "inactive"
 
 
+def test_validate_and_get_company_inactive_dry_run_skips_delete(monkeypatch, requests_mock):
+    # Regression: an inactive company with existing jobs always fired a real,
+    # CIF-wide delete_jobs_by_cif, even under a plain --dry-run invocation,
+    # so a plain --dry-run against an ANAF-inactive company still fired a
+    # real, CIF-wide DELETE. dry_run=True must skip that write entirely.
+    monkeypatch.setattr(anaf, "get_company_from_anaf", lambda cif: {"cui": 12345678, "name": "DEFUNCT SRL", "inactive": True})
+    monkeypatch.setattr(api, "query_solr", lambda cif: {"numFound": 5, "docs": []})
+    requests_mock.get(company.PEVIITOR_COMPANY_URL, json={"companies": []})
+
+    def _boom(cif):
+        raise AssertionError("dry_run=True must never call delete_jobs_by_cif")
+
+    monkeypatch.setattr(api, "delete_jobs_by_cif", _boom)
+
+    result = company.validate_and_get_company(dry_run=True)
+    assert result["status"] == "inactive"
+
+
 def test_validate_and_get_company_peviitor_failure_is_non_fatal(monkeypatch, requests_mock):
     monkeypatch.setattr(anaf, "get_company_from_anaf", lambda cif: {"cui": 12345678, "name": "ACME SRL", "inactive": False})
     monkeypatch.setattr(api, "query_solr", lambda cif: {"numFound": 0, "docs": []})
