@@ -26,7 +26,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from . import api
+from .config import OWN_URL_PREFIX
 from .job_validator import validate_by_content
+
+
+def _is_own_job(url: str) -> bool:
+    """The same CIF can carry jobs from OTHER peviitor scrapers / aggregators
+    (eJobs, BestJobs imports, etc.) -- query_solr(cif) returns all of them,
+    but delete_expired_jobs must only ever touch the ones THIS scraper owns.
+    """
+    return isinstance(url, str) and url.startswith(OWN_URL_PREFIX)
 
 HELP = """
 Job URL Validator
@@ -88,8 +97,15 @@ def load_urls_from_file(file_path: str) -> list[str]:
 
 
 def delete_expired_jobs(expired_jobs: list[dict]) -> None:
-    print(f"\nDeleting {len(expired_jobs)} expired jobs from Solr...")
-    for job in expired_jobs:
+    ours = [job for job in expired_jobs if _is_own_job(job["url"])]
+    not_ours = [job for job in expired_jobs if not _is_own_job(job["url"])]
+    if not_ours:
+        print(f"\n{len(not_ours)} expired job(s) belong to another scraper on this CIF -- never touched:")
+        for job in not_ours:
+            print(f"  {job['url']}")
+
+    print(f"\nDeleting {len(ours)} expired jobs from Solr...")
+    for job in ours:
         print(f"Deleting: {job['url']}")
         api.delete_job_by_url(job["url"])
     print("Done.")

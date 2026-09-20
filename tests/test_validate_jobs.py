@@ -66,16 +66,28 @@ def test_load_urls_from_file_unknown_format_raises(tmp_path):
 def test_delete_expired_jobs_calls_api_delete(monkeypatch):
     deleted = []
     monkeypatch.setattr(api, "delete_job_by_url", lambda url: deleted.append(url))
-    vj.delete_expired_jobs([{"url": "https://x/1/"}, {"url": "https://x/2/"}])
-    assert deleted == ["https://x/1/", "https://x/2/"]
+    own1, own2 = f"{vj.OWN_URL_PREFIX}1/", f"{vj.OWN_URL_PREFIX}2/"
+    vj.delete_expired_jobs([{"url": own1}, {"url": own2}])
+    assert deleted == [own1, own2]
+
+
+def test_delete_expired_jobs_skips_urls_not_owned_by_this_scraper(monkeypatch):
+    # Regression: the same CIF can carry jobs added by another peviitor
+    # scraper or aggregator. delete_expired_jobs must never touch those.
+    deleted = []
+    monkeypatch.setattr(api, "delete_job_by_url", lambda url: deleted.append(url))
+    own = f"{vj.OWN_URL_PREFIX}1/"
+    vj.delete_expired_jobs([{"url": own}, {"url": "https://someone-elses-scraper.example/job/1/"}])
+    assert deleted == [own]
 
 
 def test_main_cif_mode_without_delete_writes_expired_jobs_file(monkeypatch):
-    monkeypatch.setattr(api, "query_solr", lambda cif: {"numFound": 1, "docs": [{"url": "https://x/1/"}]})
+    own = f"{vj.OWN_URL_PREFIX}1/"
+    monkeypatch.setattr(api, "query_solr", lambda cif: {"numFound": 1, "docs": [{"url": own}]})
     monkeypatch.setattr(
         vj,
         "validate_by_content",
-        _fake_validate_by_content({"https://x/1/": {"url": "https://x/1/", "status": "expired", "httpStatus": 404, "title": None, "error": None}}),
+        _fake_validate_by_content({own: {"url": own, "status": "expired", "httpStatus": 404, "title": None, "error": None}}),
     )
     exit_code = vj.main(["12345678"])
     assert exit_code == 0
@@ -84,16 +96,17 @@ def test_main_cif_mode_without_delete_writes_expired_jobs_file(monkeypatch):
 
 
 def test_main_cif_mode_with_delete_flag_deletes(monkeypatch):
-    monkeypatch.setattr(api, "query_solr", lambda cif: {"numFound": 1, "docs": [{"url": "https://x/1/"}]})
+    own = f"{vj.OWN_URL_PREFIX}1/"
+    monkeypatch.setattr(api, "query_solr", lambda cif: {"numFound": 1, "docs": [{"url": own}]})
     monkeypatch.setattr(
         vj,
         "validate_by_content",
-        _fake_validate_by_content({"https://x/1/": {"url": "https://x/1/", "status": "expired", "httpStatus": 404, "title": None, "error": None}}),
+        _fake_validate_by_content({own: {"url": own, "status": "expired", "httpStatus": 404, "title": None, "error": None}}),
     )
     deleted = []
     monkeypatch.setattr(api, "delete_job_by_url", lambda url: deleted.append(url))
     vj.main(["12345678", "--delete"])
-    assert deleted == ["https://x/1/"]
+    assert deleted == [own]
 
 
 def test_main_url_mode(monkeypatch):
