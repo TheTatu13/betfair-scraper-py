@@ -1,5 +1,8 @@
 name: Tests
 
+# CANONICAL CALLER PATTERN from the Brewtality-3-16 template — do not add
+# test logic here. Changes belong in tests-reusable.yml in the template.
+
 on:
   push:
     branches: [main]
@@ -8,30 +11,5 @@ on:
   workflow_dispatch:
 
 jobs:
-  pytest:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.10", "3.12"]
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-      - run: pip install -e ".[dev]"
-      - env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: pytest -q
-
-  pytest-with-scrapling:
-    runs-on: ubuntu-latest
-    continue-on-error: true  # optional dependency — don't block the build if it can't install
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - run: pip install -e ".[dev,adaptive]"
-      - env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: pytest -q
+  tests:
+    uses: TheTatu13/Brewtality-3-16/.github/workflows/tests-reusable.yml@v1

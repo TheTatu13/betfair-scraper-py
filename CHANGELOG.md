@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.2.0] - 2026-09-23
+
+### Fixed
+- `scrape.yml`/`tests.yml`: `GITHUB_TOKEN` now passed to pre-scrape tests
+  (was hitting GitHub's unauthenticated rate limit intermittently).
+- `autoheal` job: `gh` calls now pass `-R "${{ github.repository }}"`.
+- `scrape.yml`: dry-run gate now checks `event_name == 'workflow_dispatch'`
+  before reading `inputs.dry_run` — a `schedule` run has no `inputs`
+  context, so the previous check silently forced every cron run into
+  dry-run forever and this scraper never wrote real data.
+- `tests/integration/test_company_real.py`: live ANAF/CUIScan and peViitor
+  Solr calls now retry (3 attempts) and `pytest.skip()` instead of failing
+  the build on transient upstream flakiness.
+
+### Changed
+- `scrape.yml` / `tests.yml` now call the Brewtality-3-16 template's
+  reusable workflows (`scrape-reusable.yml` / `tests-reusable.yml` @v1)
+  instead of carrying the logic locally — pulled in from template v0.2.0.
+
 ## [0.1.0] - 2026-09-10
 
 ### Added

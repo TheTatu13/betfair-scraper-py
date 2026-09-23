@@ -1,5 +1,9 @@
 name: Scrape
 
+# CANONICAL CALLER PATTERN from the Brewtality-3-16 template — do not add
+# scrape logic here. Fixes belong in the template's scrape-reusable.yml so
+# they reach every derived scraper automatically.
+
 on:
   schedule:
     - cron: '0 6 * * *'
@@ -12,61 +16,9 @@ on:
 
 jobs:
   scrape:
-    runs-on: ubuntu-latest
+    uses: TheTatu13/Brewtality-3-16/.github/workflows/scrape-reusable.yml@v1
+    with:
+      dry_run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == true }}
     permissions:
       contents: write
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - run: pip install -e .
-      - name: Pre-scrape tests
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: pip install -e ".[dev]" && pytest -q
-      - name: Run scraper
-        run: |
-          # Only a manual workflow_dispatch run can ask for dry-run (default true
-          # in the UI, so an explicit "false" is required to write for real from
-          # there). A scheduled run has no `inputs` context at all --
-          # github.event.inputs.dry_run is "" on a `schedule` trigger, which
-          # must fall through to a REAL run, not dry-run: the previous
-          # `[ "" = "false" ]` check took the dry-run branch unconditionally on
-          # every cron fire, so the daily automation never actually wrote to
-          # the API. Gating on event_name first is what fixes that.
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
-            python -m scraper.main --dry-run
-          else
-            python -m scraper.main
-          fi
-
-      - name: Push docs/ back to the repo
-        if: always()
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/jobs.md docs/company.json company.json 2>/dev/null || true
-          git commit -m "[skip ci] Update scraped jobs" || echo "No changes to commit"
-          git push || echo "Push failed (race condition) -- will be picked up next run"
-
-  autoheal:
-    runs-on: ubuntu-latest
-    needs: scrape
-    if: failure()
-    permissions:
       issues: write
-    steps:
-      - env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          gh label create auto-heal --color d73a4a --description "Automated failure of a scheduled workflow" -R "${{ github.repository }}" 2>/dev/null || true
-          EXISTING=$(gh issue list --label auto-heal --state open --search "Auto-heal: scrape in:title" --json number --jq '.[0].number // empty' -R "${{ github.repository }}")
-          if [ -n "$EXISTING" ]; then
-            gh issue comment "$EXISTING" --body "Another run failed: ${RUN_URL} ($(date -u +%FT%TZ))." -R "${{ github.repository }}"
-          else
-            gh issue create --title "Auto-heal: scrape workflow failed $(date -u +%Y-%m-%d)" --label auto-heal \
-              --body "The Scrape workflow failed. Run: ${RUN_URL}. Likely a broken listing selector (the canary aborts at 0 jobs), an api.peviitor.ro outage, or a failed pre-scrape test." \
-              -R "${{ github.repository }}"
-          fi
