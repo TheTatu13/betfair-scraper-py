@@ -1,5 +1,5 @@
 {
-  "validatedAt": "2026-09-13T15:39:46.809772+00:00",
+  "validatedAt": "2026-09-23T15:28:25.140389+00:00",
   "source": "ANAF",
   "brand": "Betfair",
   "anaf": {
@@ -51,20 +51,7 @@
       "country": "",
       "postalCode": ""
     },
-    "administrators": [
-      {
-        "name": "POPA IOANA",
-        "role": "administrator"
-      },
-      {
-        "name": "TOMȘA OVIDIU BOGDAN",
-        "role": "administrator"
-      },
-      {
-        "name": "LYNCH CONOR PATRICK",
-        "role": "administrator"
-      }
-    ],
+    "administrators": [],
     "authorizedCaenCodes": [],
     "onrcStatus": 0,
     "onrcStatusLabel": "Funcțiune"
