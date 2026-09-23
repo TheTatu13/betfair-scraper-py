@@ -33,6 +33,10 @@ def isolated(monkeypatch, tmp_path):
         job_validator, "validate_by_content",
         lambda url, **kw: {"url": url, "status": "active", "httpStatus": 200, "title": None, "error": None},
     )
+    # ANOFM is a real network call (mediere.anofm.ro) -- stub it to empty by
+    # default so every pre-existing orchestration test stays a pure unit test;
+    # tests that care about ANOFM merging override this explicitly.
+    monkeypatch.setattr(main, "search_anofm", lambda cif: [])
     return tmp_path
 
 
@@ -243,6 +247,71 @@ class TestScrapeCareersUrlSelection:
         jobs = main.scrape_careers()
 
         assert jobs[0]["url"] == f'{scraper["sources"]["jobArchive"]}some-job/'
+
+
+class TestSearchAnofm:
+    """Parity fix: the JS template always searched ANOFM by CIF as a
+    supplementary source in addition to the company's own careers site; the
+    Python template shipped without it since it was first written."""
+
+    def test_maps_anofm_rows_into_job_dicts(self, monkeypatch):
+        monkeypatch.setattr(main.fetch, "post", lambda url, **kw: _FakeJsonResp({
+            "rows": [
+                {"id": 123, "occupation": "Sudor", "address_locality_name": "Judet > Oras > Sat"},
+                {"id": 456, "occupation": "Electrician", "address_locality_name": "Bistrita"},
+            ]
+        }))
+        jobs = main.search_anofm("12345678")
+        assert jobs == [
+            {"url": "https://mediere.anofm.ro/app/module/mediere/job/123", "title": "Sudor", "location": ["Sat"], "source": "ANOFM"},
+            {"url": "https://mediere.anofm.ro/app/module/mediere/job/456", "title": "Electrician", "location": ["Bistrita"], "source": "ANOFM"},
+        ]
+
+    def test_returns_empty_list_on_non_ok_response(self, monkeypatch):
+        monkeypatch.setattr(main.fetch, "post", lambda url, **kw: _FakeJsonResp({}, ok=False))
+        assert main.search_anofm("12345678") == []
+
+    def test_returns_empty_list_and_does_not_raise_on_network_error(self, monkeypatch):
+        def boom(url, **kw):
+            raise ConnectionError("boom")
+        monkeypatch.setattr(main.fetch, "post", boom)
+        assert main.search_anofm("12345678") == []
+
+    def test_skips_rows_missing_id_or_occupation(self, monkeypatch):
+        monkeypatch.setattr(main.fetch, "post", lambda url, **kw: _FakeJsonResp({
+            "rows": [{"id": None, "occupation": "X"}, {"id": 1, "occupation": None}]
+        }))
+        assert main.search_anofm("12345678") == []
+
+    def test_run_merges_anofm_jobs_alongside_careers_site_jobs(self, monkeypatch, isolated):
+        monkeypatch.setattr(company_validation, "validate_and_get_company", lambda **kw: _active())
+        monkeypatch.setattr(main, "scrape_careers", lambda: [{"url": "https://jobs.example.com/careers/x/", "title": "X"}])
+        monkeypatch.setattr(main, "search_anofm", lambda cif: [{"url": "https://mediere.anofm.ro/app/module/mediere/job/1", "title": "Y", "source": "ANOFM"}])
+        upserted = []
+        monkeypatch.setattr(api, "upsert_jobs", lambda jobs: upserted.append(jobs))
+        main.run()
+        urls = {j["url"] for j in upserted[0]}
+        assert urls == {"https://jobs.example.com/careers/x/", "https://mediere.anofm.ro/app/module/mediere/job/1"}
+
+    def test_run_does_not_duplicate_a_url_present_in_both_sources(self, monkeypatch, isolated):
+        shared_url = "https://jobs.example.com/careers/x/"
+        monkeypatch.setattr(company_validation, "validate_and_get_company", lambda **kw: _active())
+        monkeypatch.setattr(main, "scrape_careers", lambda: [{"url": shared_url, "title": "X"}])
+        monkeypatch.setattr(main, "search_anofm", lambda cif: [{"url": shared_url, "title": "X (ANOFM copy)", "source": "ANOFM"}])
+        upserted = []
+        monkeypatch.setattr(api, "upsert_jobs", lambda jobs: upserted.append(jobs))
+        main.run()
+        assert len(upserted[0]) == 1
+
+
+class _FakeJsonResp:
+    def __init__(self, data, ok=True):
+        self._data = data
+        self.ok = ok
+        self.status_code = 200 if ok else 500
+
+    def json(self):
+        return self._data
 
 
 class TestDropDeadUrls:

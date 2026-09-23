@@ -136,6 +136,52 @@ def scrape_careers() -> list[dict]:
     return jobs
 
 
+def search_anofm(cif: str) -> list[dict]:
+    """Free public postings for this CIF from ANOFM (the state employment
+    agency), in addition to the company's own careers site. Port of
+    scraper-js's ``searchANOFM`` -- the Python template shipped without this
+    supplementary source since it was first written, even though the README
+    always documented both variants as targeting "a Romanian company's own
+    careers site + ANOFM". These are never treated as ``ownJobUrlPrefix``
+    jobs (they live under mediere.anofm.ro), so they're purely additive and
+    never touched by stale-job deletion.
+    """
+    jobs: list[dict] = []
+    try:
+        payload = {
+            "current": 1,
+            "rowCount": 250,
+            "sort": {"created_at": "desc"},
+            "employer_tax_code": cif,
+        }
+        resp = fetch.post(
+            "https://mediere.anofm.ro/api/entity/vw_public_job_posting",
+            label="anofm",
+            json=payload,
+            headers={"Content-Type": "application/json"},
+        )
+        if not resp.ok:
+            log.info("ANOFM returned %d", resp.status_code)
+            return jobs
+        data = resp.json()
+        for row in data.get("rows") or []:
+            parts = [p.strip() for p in (row.get("address_locality_name") or "").split(">")]
+            location = parts[-1] if len(parts) > 1 else (parts[0] if parts else "")
+            job_id = row.get("id")
+            if not job_id or not row.get("occupation"):
+                continue
+            jobs.append({
+                "url": f"https://mediere.anofm.ro/app/module/mediere/job/{job_id}",
+                "title": row["occupation"],
+                "location": [location] if location else None,
+                "source": "ANOFM",
+            })
+        log.info("found %d jobs on ANOFM", len(jobs))
+    except Exception as exc:  # noqa: BLE001 - best-effort supplementary source
+        log.info("ANOFM error: %s", exc)
+    return jobs
+
+
 def _drop_dead_urls(jobs: list[dict]) -> list[dict]:
     """Pre-upload safety net: GET-check every job URL and drop the ones that
     don't resolve. ``validate.py`` only checks URL *shape* (a syntactically
@@ -268,6 +314,15 @@ def run(*, dry_run: bool = False) -> int:
 
     log.info("=== Step 3: scrape ===")
     raw_jobs = scrape_careers()
+
+    anofm_jobs = search_anofm(cif)
+    seen_urls = {j["url"] for j in raw_jobs}
+    for job in anofm_jobs:
+        if job["url"] not in seen_urls:
+            raw_jobs.append(job)
+            seen_urls.add(job["url"])
+    log.info("jobs from ANOFM: %d", len(anofm_jobs))
+    log.info("total jobs scraped (careers site + ANOFM): %d", len(raw_jobs))
 
     assert_scrape_yielded_jobs(raw_jobs)  # canary
     valid_jobs, _ = filter_valid_jobs(raw_jobs)
