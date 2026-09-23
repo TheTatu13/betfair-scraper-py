@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "betfair-romania-development-scraper"
-version = "0.2.0"
+version = "0.3.0"
 description = "Self-healing job scraper skeleton for peviitor.ro (Python counterpart of the *-nodejs-scraper template)"
 requires-python = ">=3.10"
 dependencies = [
