@@ -67,7 +67,7 @@ REQUIRED_WORKFLOWS = [
 # blank ("(blank -> fallbacks)" in setup.py's own summary), but a raw
 # {{TOKEN}} surviving into a commit means setup.py was skipped or interrupted
 # partway through.
-_PLACEHOLDER_RX = re.compile(r"\{\{[A-Z_]+\}\}")
+_PLACEHOLDER_RX = re.compile(r"\{\{(?!PLACEHOLDER\}\})[A-Z_]+\}\}")
 
 
 def test_always_required_root_files_exist():
@@ -158,9 +158,15 @@ def test_no_leftover_placeholders():
         pytest.skip("this is the template itself -- placeholders are expected here")
 
     skip_dirs = {".git", "node_modules", "__pycache__", ".pytest_cache", ".venv"}
+    # This file (and its JS mirror) talk *about* the {{TOKEN}} convention in
+    # comments/docstrings/error messages -- exclude self-reference, not just
+    # the literal word "PLACEHOLDER", so this test doesn't flag itself.
+    skip_files = {pathlib.Path(__file__).resolve()}
     hits: list[str] = []
     for path in ROOT.rglob("*"):
         if not path.is_file() or any(part in skip_dirs for part in path.parts):
+            continue
+        if path.resolve() in skip_files:
             continue
         try:
             text = path.read_text(encoding="utf-8")
@@ -168,4 +174,4 @@ def test_no_leftover_placeholders():
             continue
         if _PLACEHOLDER_RX.search(text):
             hits.append(str(path.relative_to(ROOT)))
-    assert not hits, f"Leftover {{{{PLACEHOLDER}}}} tokens in: {hits}"
+    assert not hits, f"Leftover placeholder tokens in: {hits}"
