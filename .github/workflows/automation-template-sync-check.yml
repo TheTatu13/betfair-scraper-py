@@ -17,24 +17,22 @@ jobs:
       - name: Get template repo
         id: template
         run: |
-          TEMPLATE=$(gh api "repos/${{ github.repository }}" \
-            --jq '.template_repository.full_name // empty')
-          echo "repo=${TEMPLATE}" >> "$GITHUB_OUTPUT"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Not a derived repo
-        if: steps.template.outputs.repo == ''
-        run: echo "This repo is a template (not derived). Skipping."
+          # This repo's GitHub `template_repository` metadata is empty --
+          # it was never created via the "Use this template" button, so a
+          # lookup on that field always comes back empty and this whole
+          # check silently no-ops every week. Hardcode the actual template
+          # instead of relying on metadata that isn't set. scraper-py has
+          # no root CHANGELOG.md, so point at its own.
+          echo "repo=TheTatu13/Brewtality-3-16" >> "$GITHUB_OUTPUT"
+          echo "changelog_path=scraper-py/CHANGELOG.md" >> "$GITHUB_OUTPUT"
 
       - name: Fetch versions
         id: versions
-        if: steps.template.outputs.repo != ''
         run: |
           DERIVED=$(grep -m1 '^## \[' CHANGELOG.md | sed 's/## \[\(.*\)\]/\1/')
           echo "derived=${DERIVED}" >> "$GITHUB_OUTPUT"
 
-          RAW=$(gh api "repos/${{ steps.template.outputs.repo }}/contents/CHANGELOG.md" \
+          RAW=$(gh api "repos/${{ steps.template.outputs.repo }}/contents/${{ steps.template.outputs.changelog_path }}" \
             --jq '.content' | base64 -d)
           TEMPLATE=$(echo "$RAW" | grep -m1 '^## \[' | sed 's/## \[\(.*\)\]/\1/')
           echo "template=${TEMPLATE}" >> "$GITHUB_OUTPUT"
@@ -43,7 +41,6 @@ jobs:
 
       - name: Compare versions
         id: compare
-        if: steps.template.outputs.repo != ''
         run: |
           D="${{ steps.versions.outputs.derived }}"
           T="${{ steps.versions.outputs.template }}"
@@ -81,7 +78,7 @@ jobs:
           | **This repo** | ${{ steps.versions.outputs.derived }} |
 
           ### What to do
-          1. Review the [template changelog](https://github.com/${{ steps.template.outputs.repo }}/blob/main/CHANGELOG.md) for relevant changes
+          1. Review the [template changelog](https://github.com/${{ steps.template.outputs.repo }}/blob/main/${{ steps.template.outputs.changelog_path }}) for relevant changes
           2. Compare differences between the template and this derived scraper
           3. Apply relevant template updates
           4. Close this issue when done"
