@@ -27,6 +27,13 @@ ALWAYS_REQUIRED_ROOT_FILES = [
     "pyproject.toml",
 ]
 
+# Lives one level up from here (repo root) in the template checkout --
+# scraper-py/ isn't a derived repo's root until setup.py promotes it -- but
+# at true root once derived, same as everything above. Checked separately
+# (and skipped in the template itself) rather than folded into the list
+# above so it doesn't need a template-relative path hack.
+COMMIT_CHECKLIST_FILE = "COMMIT_CHECKLIST.md"
+
 # Added by the ai/*.md documentation pass (compliance-audit Group 4).
 FULL_AI_DOC_SET = [
     "AGENTS.md",
@@ -50,7 +57,17 @@ REQUIRED_WORKFLOWS = [
     "job-deep-validate.yml",
     "job-recovery-from-disaster.yml",
     "automation-template-sync-check.yml",
+    "automation-health-summary.yml",
 ]
+
+# Placeholders like {{COMPANY_NAME}} must all be filled in by setup.py before
+# a derived repo's first commit -- a leftover one is exactly the kind of bug
+# that went unnoticed in two derived repos' tests.yml until a manual audit
+# caught it (see COMMIT_CHECKLIST.md). Config/docs values genuinely can be
+# blank ("(blank -> fallbacks)" in setup.py's own summary), but a raw
+# {{TOKEN}} surviving into a commit means setup.py was skipped or interrupted
+# partway through.
+_PLACEHOLDER_RX = re.compile(r"\{\{[A-Z_]+\}\}")
 
 
 def test_always_required_root_files_exist():
@@ -110,3 +127,45 @@ def test_gitignore_excludes_python_artifacts():
     gitignore = (ROOT / ".gitignore").read_text(encoding="utf-8")
     for pattern in ("__pycache__", ".pytest_cache", "*.py[cod]", "tmp/"):
         assert pattern in gitignore, f".gitignore missing pattern: {pattern}"
+
+
+def _is_template_checkout() -> bool:
+    """True only in Brewtality-3-16 itself, never in a derived repo.
+
+    setup.py always renames pyproject.toml's `name` away from
+    "peviitor-scraper-template" as its very last content edit -- so this
+    stays true exactly as long as the {{PLACEHOLDER}} tokens below are
+    still legitimately unfilled.
+    """
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    match = re.search(r'^name = "([^"]+)"', pyproject, re.M)
+    return bool(match) and match.group(1) == "peviitor-scraper-template"
+
+
+def test_commit_checklist_exists():
+    if _is_template_checkout():
+        pytest.skip("this is the template itself -- COMMIT_CHECKLIST.md lives at the monorepo root, not here")
+    assert (ROOT / COMMIT_CHECKLIST_FILE).exists(), f"Missing {COMMIT_CHECKLIST_FILE}"
+
+
+def test_no_leftover_placeholders():
+    """A derived repo's first commit must have every {{PLACEHOLDER}} filled
+    in by setup.py. One surviving here means setup.py was skipped, aborted
+    partway, or a file it doesn't touch (e.g. added after derivation) still
+    has a stray token pasted from the template. Skipped in the template
+    itself, where these tokens are the entire point."""
+    if _is_template_checkout():
+        pytest.skip("this is the template itself -- placeholders are expected here")
+
+    skip_dirs = {".git", "node_modules", "__pycache__", ".pytest_cache", ".venv"}
+    hits: list[str] = []
+    for path in ROOT.rglob("*"):
+        if not path.is_file() or any(part in skip_dirs for part in path.parts):
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+        if _PLACEHOLDER_RX.search(text):
+            hits.append(str(path.relative_to(ROOT)))
+    assert not hits, f"Leftover {{{{PLACEHOLDER}}}} tokens in: {hits}"
