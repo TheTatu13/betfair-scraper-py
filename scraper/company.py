@@ -30,6 +30,63 @@ CACHE_MAX_AGE_DAYS = 7
 ROOT_CACHE_PATH = Path("company.json")
 TMP_CACHE_PATH = Path("tmp/company.json")
 
+# ============================================================================
+# COMPANY MODEL - schema for the peviitor company-core document
+# ============================================================================
+
+#: Declarative schema for a peviitor company-core document, mirrored from
+#: what scrape-reusable.yml's upsert step writes and from
+#: api.peviitor.ro/v1/company/'s response shape. Mirrors the JS template's
+#: COMPANY_MODEL_FIELDS (scraper/company.js) field for field. Used by
+#: validate_company_model() so a consistency test can assert the *live*
+#: record still has the fields/types/status the fleet relies on, instead of
+#: only checking that our own upsert payload looked right.
+COMPANY_MODEL_FIELDS: list[dict[str, Any]] = [
+    {"name": "id", "required": True, "type": "string"},
+    {"name": "company", "required": True, "type": "string"},
+    {"name": "brand", "required": False, "type": "string"},
+    {"name": "group", "required": False, "type": "string"},
+    {"name": "status", "required": False, "type": "string", "allowed": ["activ", "suspendat", "inactiv", "radiat"]},
+    {"name": "location", "required": False, "type": "array"},
+    {"name": "website", "required": False, "type": "array"},
+    {"name": "career", "required": False, "type": "array"},
+    {"name": "lastScraped", "required": False, "type": "string"},
+    {"name": "scraperFile", "required": False, "type": "string"},
+]
+
+
+def validate_company_model(data: dict | None) -> dict[str, Any]:
+    """Validate a company-core document against COMPANY_MODEL_FIELDS.
+
+    Returns ``{"valid": bool, "errors": [str, ...], "extra_fields": [str, ...]}``.
+    """
+    if not isinstance(data, dict):
+        return {"valid": False, "errors": ["No company document provided"], "extra_fields": []}
+
+    errors: list[str] = []
+    for field in COMPANY_MODEL_FIELDS:
+        name = field["name"]
+        value = data.get(name)
+
+        if field["required"] and (value is None or value == ""):
+            errors.append(f"Missing required field: {name}")
+            continue
+        if value is None:
+            continue
+
+        if field["type"] == "string" and not isinstance(value, str):
+            errors.append(f"Field {name} should be string, got {type(value).__name__}")
+        if field["type"] == "array" and not isinstance(value, list):
+            errors.append(f"Field {name} should be array, got {type(value).__name__}")
+        allowed = field.get("allowed")
+        if allowed and value not in allowed:
+            errors.append(f"Field {name} has invalid value {value!r}. Allowed: {', '.join(allowed)}")
+
+    allowed_fields = {f["name"] for f in COMPANY_MODEL_FIELDS}
+    extra_fields = [k for k in data.keys() if k not in allowed_fields]
+
+    return {"valid": not errors, "errors": errors, "extra_fields": extra_fields}
+
 
 def _get_company_from_peviitor(company_name: str) -> dict | None:
     res = requests.get(
