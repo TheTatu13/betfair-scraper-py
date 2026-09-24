@@ -162,8 +162,12 @@ def validate_and_get_company(*, dry_run: bool = False) -> dict[str, Any]:
 
     ``dry_run`` must reach all the way here: an ANAF-inactive company below
     triggers ``delete_jobs_by_cif`` -- a real, CIF-wide DELETE against
-    peviitor's live API -- and this function used to fire it unconditionally,
-    with no way for a caller to ask for a safe, read-only check.
+    peviitor's live API that removes every job under that CIF, including
+    ones scraped by other, unrelated scrapers -- and this function used to
+    fire it unconditionally, with no way for a caller to ask for a safe,
+    read-only check. `main.run(dry_run=True)` calling this with no
+    `dry_run` of its own meant a plain `--dry-run` invocation against a
+    company ANAF reports inactive would still mass-delete real, live jobs.
     """
     log.info("=== Step 1: Validate company via ANAF ===")
     data = get_company_data()
@@ -176,13 +180,29 @@ def validate_and_get_company(*, dry_run: bool = False) -> dict[str, Any]:
     log.info("=== Step 3: Validate via Peviitor ===")
     peviitor_data = None
     try:
-        peviitor_data = _get_company_from_peviitor(COMPANY_BRAND)
+        # Peviitor's own search is an exact, case-sensitive match against
+        # the legal name it already has stored (uppercase) -- querying
+        # with the brand (e.g. "Hochland" against a stored "HOCHLAND ...")
+        # never matches, so this silently returned no record, and every
+        # job/company write below fell back to ANAF's freshly fetched name
+        # instead of whatever peviitor already had indexed.
+        peviitor_data = _get_company_from_peviitor(COMPANY_LEGAL_NAME.upper())
         log.info("peviitor data fetched successfully")
     except Exception as exc:  # noqa: BLE001 - best-effort, non-fatal
         log.info("peviitor API error: %s", exc)
 
     if anaf_data:
         _save_company_data(anaf_data, peviitor_data)
+
+    # Prefer the name peviitor already has on file for this CIF: ANAF's
+    # spelling (diacritics, spacing) can drift from what's already indexed
+    # and faceted on the site, and peviitor's company-core upsert does not
+    # reliably rewrite an existing "company" field -- so a job tagged with
+    # ANAF's fresh name can permanently mismatch the site's "Companie"
+    # filter even though free-text search still finds it. Only fall back
+    # to ANAF's name for a company peviitor has never seen before.
+    if peviitor_data and peviitor_data.get("company"):
+        company_name = peviitor_data["company"]
 
     if not active:
         if dry_run:
