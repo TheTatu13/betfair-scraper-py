@@ -10,15 +10,15 @@
 | Location | JUD. CLUJ, MUN. CLUJ-NAPOCA, BLD. 21 DECEMBRIE 1989, NR.77, CLĂDIRILE A-F. ET.4 |
 | Website | [https://www.betfairromania.ro](https://www.betfairromania.ro) |
 | Careers | [https://www.betfairromania.ro/jobs](https://www.betfairromania.ro/jobs) |
-| Last Scraped | 2026-09-23 |
+| Last Scraped | 2026-09-24 |
 
-## Current Job Listings (19)
+## Current Job Listings (20)
 
-_Generated: 2026-09-23T15:28:32.525504+00:00_
+_Generated: 2026-09-24T10:35:22.875381+00:00_
 
-### Senior Platform Engineering Manager - FanDuel, Hybrid
+### Senior Platform Engineering Manager - FanDuel, Hybrid & Remote
 
-- **URL:** [https://www.betfairromania.ro/jobs/jr137245/senior-platform-engineering-manager-fanduel-hybrid/](https://www.betfairromania.ro/jobs/jr137245/senior-platform-engineering-manager-fanduel-hybrid/)
+- **URL:** [https://www.betfairromania.ro/jobs/jr137245/senior-platform-engineering-manager-fanduel-hybrid-remote/](https://www.betfairromania.ro/jobs/jr137245/senior-platform-engineering-manager-fanduel-hybrid-remote/)
 - **Work Mode:** on-site
 - **Location:** Cluj-Napoca
 - **Status:** scraped
@@ -26,6 +26,13 @@ _Generated: 2026-09-23T15:28:32.525504+00:00_
 ### Senior Reliability Engineer - FanDuel, Hybrid & Remote
 
 - **URL:** [https://www.betfairromania.ro/jobs/jr137822/senior-reliability-engineer-fanduel-hybrid-remote/](https://www.betfairromania.ro/jobs/jr137822/senior-reliability-engineer-fanduel-hybrid-remote/)
+- **Work Mode:** on-site
+- **Location:** Cluj-Napoca
+- **Status:** scraped
+
+### Internship Site Reliability Engineer - FanDuel (6 months), Hybrid
+
+- **URL:** [https://www.betfairromania.ro/jobs/jr141363/internship-site-reliability-engineer-fanduel-6-months-hybrid/](https://www.betfairromania.ro/jobs/jr141363/internship-site-reliability-engineer-fanduel-6-months-hybrid/)
 - **Work Mode:** on-site
 - **Location:** Cluj-Napoca
 - **Status:** scraped
@@ -114,9 +121,9 @@ _Generated: 2026-09-23T15:28:32.525504+00:00_
 - **Location:** Cluj-Napoca
 - **Status:** scraped
 
-### Senior Data Engineer - FanDuel, Hybrid & Remote
+### Data Engineer - FanDuel, Hybrid & Remote
 
-- **URL:** [https://www.betfairromania.ro/jobs/jr140503/senior-data-engineer-fanduel-hybrid-remote/](https://www.betfairromania.ro/jobs/jr140503/senior-data-engineer-fanduel-hybrid-remote/)
+- **URL:** [https://www.betfairromania.ro/jobs/jr140503/data-engineer-fanduel-hybrid-remote/](https://www.betfairromania.ro/jobs/jr140503/data-engineer-fanduel-hybrid-remote/)
 - **Work Mode:** on-site
 - **Location:** Cluj-Napoca
 - **Status:** scraped
