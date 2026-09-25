@@ -1,5 +1,5 @@
 {
-  "validatedAt": "2026-09-24T10:35:12.634480+00:00",
+  "validatedAt": "2026-09-25T10:38:45.188703+00:00",
   "source": "ANAF",
   "brand": "Betfair",
   "anaf": {
@@ -56,7 +56,25 @@
     "onrcStatus": 0,
     "onrcStatusLabel": "Funcțiune"
   },
-  "peviitor": null,
+  "peviitor": {
+    "id": "22201773",
+    "company": "BETFAIR ROMANIA DEVELOPMENT SRL",
+    "brand": "Betfair",
+    "status": "activ",
+    "location": [
+      "JUD. CLUJ, MUN. CLUJ-NAPOCA, BLD. 21 DECEMBRIE 1989, NR.77, CLĂDIRILE A-F. ET.4"
+    ],
+    "website": [
+      "https://www.betfairromania.ro"
+    ],
+    "career": [
+      "https://www.betfairromania.ro/jobs"
+    ],
+    "lastScraped": "2026-09-24",
+    "scraperFile": "https://github.com/TheTatu13/betfair-scraper-py/actions/workflows/scrape.yml",
+    "_version_": 1877209107987955712,
+    "_root_": "22201773"
+  },
   "summary": {
     "company": "BETFAIR ROMANIA DEVELOPMENT SRL",
     "cif": "22201773",
