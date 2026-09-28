@@ -10,11 +10,11 @@
 | Location | JUD. CLUJ, MUN. CLUJ-NAPOCA, BLD. 21 DECEMBRIE 1989, NR.77, CLĂDIRILE A-F. ET.4 |
 | Website | [https://www.betfairromania.ro](https://www.betfairromania.ro) |
 | Careers | [https://www.betfairromania.ro/jobs](https://www.betfairromania.ro/jobs) |
-| Last Scraped | 2026-09-27 |
+| Last Scraped | 2026-09-28 |
 
-## Current Job Listings (19)
+## Current Job Listings (18)
 
-_Generated: 2026-09-27T10:54:41.731168+00:00_
+_Generated: 2026-09-28T12:06:41.428038+00:00_
 
 ### Senior Platform Engineering Manager - FanDuel, Hybrid & Remote
 
@@ -82,13 +82,6 @@ _Generated: 2026-09-27T10:54:41.731168+00:00_
 ### Data Engineer - Sportsbet (12 months), Hybrid
 
 - **URL:** [https://www.betfairromania.ro/jobs/jr140975/data-engineer-sportsbet-12-months-hybrid/](https://www.betfairromania.ro/jobs/jr140975/data-engineer-sportsbet-12-months-hybrid/)
-- **Work Mode:** on-site
-- **Location:** Cluj-Napoca
-- **Status:** scraped
-
-### Engineering Manager - Sportsbet, Hybrid
-
-- **URL:** [https://www.betfairromania.ro/jobs/jr140552/engineering-manager-sportsbet-hybrid/](https://www.betfairromania.ro/jobs/jr140552/engineering-manager-sportsbet-hybrid/)
 - **Work Mode:** on-site
 - **Location:** Cluj-Napoca
 - **Status:** scraped
