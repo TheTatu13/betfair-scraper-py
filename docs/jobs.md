@@ -10,11 +10,11 @@
 | Location | JUD. CLUJ, MUN. CLUJ-NAPOCA, BLD. 21 DECEMBRIE 1989, NR.77, CLĂDIRILE A-F. ET.4 |
 | Website | [https://www.betfairromania.ro](https://www.betfairromania.ro) |
 | Careers | [https://www.betfairromania.ro/jobs](https://www.betfairromania.ro/jobs) |
-| Last Scraped | 2026-10-01 |
+| Last Scraped | 2026-10-02 |
 
 ## Current Job Listings (18)
 
-_Generated: 2026-10-01T11:54:30.856377+00:00_
+_Generated: 2026-10-02T11:26:24.838005+00:00_
 
 ### Senior Platform Engineering Manager - FanDuel, Hybrid & Remote
 
